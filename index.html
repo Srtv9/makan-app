@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة مكان | حجز لوكيشنات التصوير</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --bg-offwhite: #FAF8F5;
+            --navy-dark: #0D1117;
+            --royal-blue: #3B41D8;
+            --gold-accent: #F1B913;
+            --white: #FFFFFF;
+            --text-dark: #1A1D20;
+            --text-gray: #6C757D;
+            --border-color: #E2E8F0;
+            --search-btn: #E88D67;
+            --danger-red: #DC2626;
+            --success-green: #10B981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-offwhite);
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+
+        /* --- Toast Notification --- */
+        .toast-notification {
+            position: fixed; top: -100px; right: 50%; transform: translateX(50%);
+            background: var(--navy-dark); color: var(--gold-accent); padding: 14px 28px;
+            border-radius: 30px; border: 1px solid var(--gold-accent);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-weight: 700; font-size: 0.95rem;
+            z-index: 999999; transition: top 0.4s ease; display: flex; align-items: center; gap: 10px;
+        }
+        .toast-notification.show { top: 24px; }
+
+        /* --- Gate Modal --- */
+        .gate-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 17, 23, 0.88); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px;
+        }
+
+        .gate-card {
+            background: var(--white); border-radius: 16px; width: 100%; max-width: 680px;
+            padding: 24px 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            border: 1px solid var(--border-color); max-height: 95vh; overflow-y: auto;
+        }
+
+        .gate-card h2 { color: var(--navy-dark); margin-bottom: 4px; text-align: center; font-weight: 800; font-size: 1.4rem; }
+        .gate-card p.subtitle { color: var(--text-gray); font-size: 0.85rem; text-align: center; margin-bottom: 16px; }
+
+        .role-selector { display: flex; gap: 10px; margin-bottom: 16px; }
+        .role-option {
+            flex: 1; text-align: center; padding: 8px; border: 2px solid var(--border-color);
+            border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700;
+            color: var(--text-gray); transition: all 0.3s;
+        }
+        .role-option.active { border-color: var(--royal-blue); color: var(--royal-blue); background: rgba(59, 65, 216, 0.05); }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 16px; }
+        .form-group { margin-bottom: 0; }
+        .form-group.full-width { grid-column: span 2; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.82rem; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; outline: none; transition: all 0.3s ease; font-size: 0.88rem;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--royal-blue); box-shadow: 0 0 0 3px rgba(59, 65, 216, 0.1);
+        }
+
+        .password-hint { font-size: 0.75rem; color: var(--text-gray); margin-top: 4px; }
+        .password-hint ul { list-style: none; display: flex; gap: 12px; padding-right: 0; margin-top: 2px; }
+        .password-hint li.valid { color: #2e7d32; }
+        .password-hint li.invalid { color: #d32f2f; }
+
+        .terms-box {
+            background: var(--bg-offwhite); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 8px 12px; height: 60px; overflow-y: auto;
+            font-size: 0.78rem; margin-top: 10px; color: var(--text-gray);
+        }
+        .terms-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 0.82rem; }
+
+        .btn-primary {
+            width: 100%; background: var(--royal-blue); color: var(--white);
+            border: none; padding: 10px; border-radius: 8px; font-weight: 700;
+            font-size: 0.95rem; cursor: pointer; transition: background 0.3s;
+        }
+        .btn-primary:hover { background: #2b30b3; }
+        .btn-primary:disabled { background: #a0a5f0; cursor: not-allowed; }
+
+        .btn-add-property {
+            background: var(--gold-accent); color: var(--navy-dark); border: none;
+            padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer;
+            font-size: 0.88rem; display: none; align-items: center; gap: 6px;
+        }
+
+        .btn-my-properties {
+            background: transparent; color: var(--white); border: 1px solid var(--border-color);
+            padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer;
+            font-size: 0.88rem; display: none; align-items: center; gap: 6px;
+        }
+
+        .btn-admin-dashboard {
+            background: var(--royal-blue); color: var(--white); border: none;
+            padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer;
+            font-size: 0.88rem; display: none; align-items: center; gap: 6px;
+        }
+
+        .notif-btn {
+            position: relative; background: transparent; border: none; color: var(--white);
+            font-size: 1.3rem; cursor: pointer; padding: 6px; display: flex; align-items: center;
+        }
+        .notif-badge {
+            position: absolute; top: 0; right: 0; background: var(--danger-red);
+            color: white; font-size: 0.68rem; font-weight: 800; border-radius: 10px;
+            padding: 2px 6px; border: 2px solid var(--navy-dark); display: none;
+        }
+
+        .toggle-mode { text-align: center; margin-top: 12px; font-size: 0.85rem; color: var(--text-gray); }
+        .toggle-mode a { color: var(--royal-blue); text-decoration: none; font-weight: 700; cursor: pointer; }
+
+        /* --- Header & Layout --- */
+        header {
+            background: var(--navy-dark); color: var(--white);
+            padding: 16px 5%; display: flex; justify-content: space-between;
+            align-items: center; position: sticky; top: 0; z-index: 100;
+        }
+        .logo { font-size: 1.6rem; font-weight: 800; color: var(--gold-accent); letter-spacing: 1px; }
+        .user-nav { display: flex; align-items: center; gap: 12px; }
+        .user-badge { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; color: var(--gold-accent); }
+        .btn-logout { background: transparent; border: 1px solid var(--gold-accent); color: var(--gold-accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+
+        /* --- Hero Section --- */
+        .hero {
+            background: linear-gradient(135deg, #1B3B36 0%, #0D211E 100%);
+            color: var(--white); padding: 60px 20px 80px; text-align: right; position: relative; overflow: hidden;
+        }
+        .hero-container { max-width: 1000px; margin: 0 auto; position: relative; z-index: 2; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.12); padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; color: #E2E8F0; margin-bottom: 24px; }
+        .hero-badge::before { content: ''; width: 8px; height: 8px; background-color: var(--gold-accent); border-radius: 50%; }
+        .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.25; margin-bottom: 16px; }
+        .hero p.hero-subtitle { font-size: 1.1rem; color: #CBD5E1; max-width: 600px; line-height: 1.7; margin-bottom: 40px; }
+
+        /* --- Search Bar Widget --- */
+        .search-widget {
+            background: #FFFFFF; border-radius: 16px; padding: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 12px; max-width: 900px; color: var(--text-dark);
+        }
+        .search-item { flex: 1; display: flex; flex-direction: column; padding: 0 16px; border-left: 1px solid var(--border-color); }
+        .search-item:last-child { border-left: none; }
+        .search-item label { font-size: 0.75rem; color: var(--text-gray); margin-bottom: 4px; font-weight: 600; }
+        .search-item select, .search-item input { border: none; outline: none; font-size: 0.95rem; font-weight: 700; color: var(--navy-dark); background: transparent; width: 100%; cursor: pointer; }
+        .btn-search { background: var(--search-btn); color: #FFFFFF; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; white-space: nowrap; }
+        .btn-search:hover { background: #D77A53; transform: translateY(-2px); }
+
+        /* --- Grid & Cards --- */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+        .card { background: var(--white); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+        .card-img { height: 200px; width: 100%; object-fit: cover; }
+        .card-body { padding: 16px; }
+        .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; color: var(--navy-dark); }
+        .card-info { font-size: 0.9rem; color: var(--text-gray); margin-bottom: 12px; }
+        .card-price { font-weight: 800; color: var(--royal-blue); font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+        .btn-details { background: var(--bg-offwhite); color: var(--navy-dark); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
+
+        /* --- Floating Support Button --- */
+        .floating-support-btn {
+            position: fixed; bottom: 24px; left: 24px; background: #25D366; color: #FFFFFF; padding: 12px 20px;
+            border-radius: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); display: flex; align-items: center; gap: 10px;
+            text-decoration: none; font-weight: 700; font-size: 0.95rem; z-index: 999; transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .floating-support-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4); color: #FFFFFF; }
+        .floating-support-btn i { font-size: 1.4rem; }
+
+        /* --- Modals --- */
+        .details-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 17, 23, 0.8); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 10000; padding: 16px;
+        }
+        .details-card {
+            background: var(--white); border-radius: 16px; width: 100%; max-width: 720px;
+            max-height: 90vh; overflow-y: auto; padding: 24px; position: relative;
+        }
+        .close-btn {
+            position: absolute; top: 16px; left: 16px; background: var(--bg-offwhite);
+            border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem;
+        }
+        .details-img { width: 100%; height: 280px; object-fit: cover; border-radius: 8px; margin-bottom: 16px; }
+        
+        .calculator-box {
+            background: var(--bg-offwhite); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 16px; margin-top: 14px;
+        }
+        .calculator-box label { font-size: 0.88rem; font-weight: 700; display: block; margin-bottom: 6px; }
+        
+        .date-time-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+        }
+
+        .end-time-badge {
+            background: #E0E7FF; color: var(--royal-blue); padding: 8px 12px;
+            border-radius: 8px; font-weight: 700; font-size: 0.88rem; margin-top: 8px;
+            display: flex; align-items: center; gap: 6px; border: 1px solid #C7D2FE;
+        }
+
+        .calc-inputs { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+        .calc-inputs select, .calc-inputs input, .date-time-grid input { padding: 9px; border-radius: 6px; border: 1px solid var(--border-color); outline: none; font-size: 0.88rem; width: 100%; }
+
+        .availability-status {
+            padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; margin-top: 8px; display: none; text-align: center;
+        }
+        .availability-status.available { background: rgba(16, 185, 129, 0.15); color: #065F46; border: 1px solid var(--success-green); }
+        .availability-status.unavailable { background: rgba(220, 38, 38, 0.15); color: #991B1B; border: 1px solid var(--danger-red); }
+
+        .booking-summary-box {
+            background: rgba(59, 65, 216, 0.06); border: 1px solid var(--royal-blue);
+            color: var(--navy-dark); padding: 12px 16px; border-radius: 8px; margin-top: 12px;
+            font-weight: 700; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem;
+        }
+
+        .owner-preview-box {
+            background: rgba(241, 185, 19, 0.1); border: 1px solid var(--gold-accent);
+            color: var(--navy-dark); padding: 14px; border-radius: 10px; margin-top: 16px;
+            text-align: center; font-weight: 700; font-size: 0.95rem;
+        }
+
+        .action-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .btn-booking-request {
+            background: var(--royal-blue); color: white; border: none; padding: 14px;
+            border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.3s;
+        }
+        .btn-booking-request:hover { background: #2b30b3; }
+        .btn-booking-request:disabled { background: #A0A5F0; cursor: not-allowed; }
+
+        .whatsapp-btn {
+            background: #25D366; color: white; text-decoration: none;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px; border-radius: 8px; font-weight: 700;
+        }
+
+        .map-btn { background: var(--gold-accent); color: var(--navy-dark); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border-radius: 8px; font-weight: 700; }
+
+        .dashboard-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: var(--bg-offwhite); border: 1px solid var(--border-color); padding: 14px; border-radius: 10px; text-align: center; }
+        .stat-card div { font-size: 1.4rem; font-weight: 800; color: var(--royal-blue); }
+        .stat-card span { font-size: 0.8rem; color: var(--text-gray); }
+
+        .admin-table-box { width: 100%; overflow-x: auto; margin-top: 10px; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .admin-table th, .admin-table td { padding: 10px; border: 1px solid var(--border-color); text-align: right; }
+        .admin-table th { background: var(--navy-dark); color: white; }
+
+        .notification-item { background: var(--bg-offwhite); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 12px; font-size: 0.9rem; }
+        .notification-item.unread { border-right: 4px solid var(--royal-blue); background: #F4F6FF; }
+
+        .my-property-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; background: var(--bg-offwhite); }
+        .my-prop-actions { display: flex; gap: 8px; }
+        .btn-edit { background: var(--royal-blue); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+        .btn-delete { background: var(--danger-red); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+
+        input[type="file"] { padding: 6px; background: var(--bg-offwhite); cursor: pointer; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            .search-widget { flex-direction: column; padding: 16px; }
+            .search-item { border-left: none; border-bottom: 1px solid var(--border-color); padding: 8px 0; width: 100%; }
+            .search-item:last-child { border-bottom: none; }
+            .btn-search { width: 100%; }
+            .form-grid, .date-time-grid { grid-template-columns: 1fr; }
+            .form-group.full-width { grid-column: span 1; }
+            .dashboard-stats { grid-template-columns: 1fr; }
+            header { flex-wrap: wrap; gap: 10px; }
+            .user-nav { width: 100%; justify-content: flex-end; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- التنبيه المنبثق -->
+    <div id="toastNotification" class="toast-notification">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMessage">تمت العملية بنجاح!</span>
+    </div>
+
+    <!-- بوابة الدخول / التسجيل -->
+    <div class="gate-modal" id="gateModal">
+        <div class="gate-card">
+            <button class="close-btn" onclick="closeGateModal()">&times;</button>
+            <h2 id="modalHeader">تسجيل الدخول</h2>
+            <p class="subtitle" id="modalSubHeader">أدخل بياناتك للوصول إلى منصة مكان</p>
+
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div id="authRoleContainer" style="display: none;">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 6px;">نوع الحساب</label>
+                    <div class="role-selector" id="authRoleSelector">
+                        <div class="role-option active" onclick="selectRole('studio', this)">
+                            <i class="fa-solid fa-video"></i> استوديو إنتاج
+                        </div>
+                        <div class="role-option" onclick="selectRole('owner', this)">
+                            <i class="fa-solid fa-building"></i> صاحب عقار
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group full-width" id="nameGroup" style="display: none;">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="userName" placeholder="أدخل اسمك الكامل">
+                    </div>
+
+                    <div class="form-group" id="emailGroup">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="userEmail" placeholder="example@domain.com" required>
+                    </div>
+
+                    <div class="form-group" id="passGroup">
+                        <label>كلمة السر</label>
+                        <input type="password" id="userPass" oninput="validatePassword()" placeholder="••••••••" required>
+                    </div>
+
+                    <div class="form-group full-width" id="passHint" style="display: none;">
+                        <div class="password-hint">
+                            <ul>
+                                <li id="rule-length" class="invalid"><i class="fa-solid fa-xmark"></i> 8 حروف/أرقام على الأقل</li>
+                                <li id="rule-letter" class="invalid"><i class="fa-solid fa-xmark"></i> حرف واحد</li>
+                                <li id="rule-number" class="invalid"><i class="fa-solid fa-xmark"></i> رقم واحد</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="termsContainer" style="display: none;">
+                    <div class="terms-box">
+                        <strong>الشروط والأحكام الخاصة بمنصة مكان:</strong><br>
+                        1. التعهد بالحفاظ على نظافة وسلامة اللوكيشن المحجوز.<br>
+                        2. الالتزام بساعات التصوير المحددة في العقد.<br>
+                        3. يمنع تعديل الديكورات الدائمة دون إذن مسبق من المالك.<br>
+                        4. إخلاء المسؤولية عن أي تلفيات يسببها طاقم الإنتاج.
+                    </div>
+                    <div class="terms-check">
+                        <input type="checkbox" id="termsCheck" onchange="checkFormValid()">
+                        <label for="termsCheck">أوافق على الشروط والأحكام أعلاه</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn" style="margin-top: 10px;">تسجيل الدخول</button>
+            </form>
+
+            <div class="toggle-mode">
+                <span id="toggleText">ليس لديك حساب؟</span> 
+                <a onclick="switchAuthMode()" id="toggleLink">إنشاء حساب جديد</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- الهيدر -->
+    <header>
+        <div class="logo">مكان | MAKAN</div>
+        <div class="user-nav">
+            <button class="btn-admin-dashboard" id="adminDashboardBtn" onclick="openAdminDashboardModal()">
+                <i class="fa-solid fa-sliders"></i> لوحة التحكم ⚙️
+            </button>
+
+            <button class="notif-btn" id="notifBtn" onclick="openNotificationsModal()" style="display: none;">
+                <i class="fa-solid fa-bell"></i>
+                <span class="notif-badge" id="notifBadge">0</span>
+            </button>
+
+            <button class="btn-my-properties" id="myPropertiesBtn" onclick="openMyPropertiesModal()">
+                <i class="fa-solid fa-list-check"></i> عقاراتي
+            </button>
+            <button class="btn-add-property" id="addPropertyBtn" onclick="openAddModal()">
+                <i class="fa-solid fa-plus"></i> إضافة عقار
+            </button>
+
+            <div id="guestNav">
+                <button class="btn-logout" style="border-color: var(--royal-blue); color: var(--royal-blue); background: var(--white);" onclick="openGateModal()">
+                    <i class="fa-solid fa-right-to-bracket"></i> دخول / تسجيل
+                </button>
+            </div>
+
+            <div id="authNav" style="display: none; align-items: center; gap: 8px;">
+                <span id="displayUserName">مرحباً</span>
+                <span id="displayUserRole" class="user-badge"></span>
+                <button class="btn-logout" onclick="logout()"><i class="fa-solid fa-sign-out-alt"></i> خروج</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- الهيرو -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-badge">اختيارات مرتبة لتصل لمكانك أسرع</div>
+            <h1>خلّ فكرتك<br>تلقى مَكانها</h1>
+            <p class="hero-subtitle">أماكن مميزة للمناسبات والتصوير والاجتماعات، مرتبة بطريقة تساعدك تختار وأنت مرتاح.</p>
+
+            <div class="search-widget">
+                <div class="search-item">
+                    <label>أين تبحث؟</label>
+                    <select id="searchCity">
+                        <option value="">جميع المدن</option>
+                        <option value="الرياض">الرياض</option>
+                        <option value="جدة">جدة</option>
+                        <option value="الشرقية">الشرقية</option>
+                        <option value="مكة">مكة المكرمة</option>
+                    </select>
+                </div>
+
+                <div class="search-item">
+                    <label>ما الذي تحتاجه؟</label>
+                    <select id="searchCategory">
+                        <option value="">كل الأنواع</option>
+                        <option value="فلة">فلة / فيلا</option>
+                        <option value="استوديو">استوديو</option>
+                        <option value="صناعية">صالة إنتاج / صناعية</option>
+                    </select>
+                </div>
+
+                <div class="search-item">
+                    <label>متى؟</label>
+                    <input type="date" id="searchDate">
+                </div>
+
+                <button class="btn-search" onclick="filterLocations()">اكتشف الأماكن</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- المعرض الرئيسي -->
+    <div class="container">
+        <div class="grid" id="locationsGrid"></div>
+    </div>
+
+    <!-- زر تواصل معنا الثابت -->
+    <a href="https://wa.me/966581024347?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A3%D9%8B%D8%8C%20%D9%84%D8%AF%D9%8A%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%A8%D8%AE%D8%B5%D9%88%D8%B5%20%D9%85%D9%86%D8%B5%D8%A9%20%D9%85%D9%83%D8%A7%D9%86" target="_blank" class="floating-support-btn">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span>تواصل معنا</span>
+    </a>
+
+    <!-- نافذة لوحة التحكم للإدارة -->
+    <div class="details-modal" id="adminDashboardModal">
+        <div class="details-card">
+            <button class="close-btn" onclick="closeAdminDashboardModal()">&times;</button>
+            <h2 style="color: var(--navy-dark); margin-bottom: 16px;"><i class="fa-solid fa-sliders"></i> لوحة تحكم الإدارة العامة</h2>
+            
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div id="statTotalProps">0</div>
+                    <span>إجمالي العقارات</span>
+                </div>
+                <div class="stat-card">
+                    <div id="statTotalNotifs">0</div>
+                    <span>طلبات الحجز</span>
+                </div>
+                <div class="stat-card">
+                    <div id="statTotalOwners">0</div>
+                    <span>المُلاك المسجلين</span>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 10px; font-size: 1.05rem;">إدارة كافة العقارات المعروضة بالمنصة:</h3>
+            <div class="admin-table-box">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>العنوان</th>
+                            <th>الموقع</th>
+                            <th>التسعير</th>
+                            <th>المالك</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminPropsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة وتعديل العقار -->
+    <div class="details-modal" id="addModal">
+        <div class="details-card">
+            <button class="close-btn" onclick="closeAddModal()">&times;</button>
+            <h2 id="addPropertyModalTitle" style="color: var(--navy-dark); margin-bottom: 16px;">إضافة عقار جديد للمنافسة</h2>
+            <form onsubmit="handleSaveProperty(event)">
+                <input type="hidden" id="editingPropertyId" value="">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>عنوان العقار</label>
+                        <input type="text" id="newTitle" required placeholder="مثال: استوديو بودكاست">
+                    </div>
+                    <div class="form-group">
+                        <label>المدينة والحي</label>
+                        <input type="text" id="newLocation" required placeholder="مثال: الرياض - حي لبن">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>رقم الواتساب للتواصل (مثال: 0581024347)</label>
+                        <input type="tel" id="newPhone" required placeholder="05xxxxxxxx">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>خيارات التأجير المتاحة للمستأجر</label>
+                        <select id="rentalOptions" onchange="togglePricingInputs()">
+                            <option value="both">تأجير بالساعة وباليوم معا</option>
+                            <option value="hourly">تأجير بالساعة فقط</option>
+                            <option value="daily">تأجير باليوم فقط</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="hourlyGroup">
+                        <label>سعر الساعة (ر.س)</label>
+                        <input type="number" id="newHourlyPrice" placeholder="مثال: 150">
+                    </div>
+
+                    <div class="form-group" id="minHoursGroup">
+                        <label>أقل عدد ساعات للحجز</label>
+                        <input type="number" id="newMinHours" value="1" min="1" placeholder="مثال: 3">
+                    </div>
+
+                    <div class="form-group full-width" id="dailyGroup">
+                        <label>السعر اليومي (ر.س)</label>
+                        <input type="number" id="newDailyPrice" placeholder="مثال: 1000">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>رفع صورة العقار من جهازك</label>
+                        <input type="file" id="newImageFile" accept="image/*">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>رابط الخريطة (Google Maps)</label>
+                        <input type="url" id="newMapUrl" placeholder="https://maps.google.com/...">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>وصف العقار والتفاصيل</label>
+                        <textarea id="newDesc" rows="3" required placeholder="اكتب وصفاً مختصراً للوكشين والمميزات..."></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 16px;">نشر العقار فوراً</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة الإشعارات الواردة -->
+    <div class="details-modal" id="notificationsModal">
+        <div class="details-card">
+            <button class="close-btn" onclick="closeNotificationsModal()">&times;</button>
+            <h2 style="color: var(--navy-dark); margin-bottom: 16px;">مركز الإشعارات والطلبات الواردة</h2>
+            <div id="notificationsList"></div>
+        </div>
+    </div>
+
+    <!-- نافذة إدارة عقارات المالك الخاصة فقط -->
+    <div class="details-modal" id="myPropertiesModal">
+        <div class="details-card">
+            <button class="close-btn" onclick="closeMyPropertiesModal()">&times;</button>
+            <h2 style="color: var(--navy-dark); margin-bottom: 16px;">لوحة عقاراتي المنشورة</h2>
+            <div id="myPropertiesList"></div>
+        </div>
+    </div>
+
+    <!-- نافذة تفاصيل اللوكيشن المحسنة -->
+    <div class="details-modal" id="detailsModal">
+        <div class="details-card">
+            <button class="close-btn" onclick="closeDetails()">&times;</button>
+            <img id="modalImg" class="details-img" src="" alt="">
+            <h2 id="modalTitle" style="color: var(--navy-dark); margin-bottom: 8px;"></h2>
+            <p id="modalLoc" style="color: var(--text-gray); font-size: 0.9rem;"></p>
+            <p id="modalDesc" style="margin-top: 12px; font-size: 0.95rem;"></p>
+
+            <div class="calculator-box" id="bookingBox">
+                <label><i class="fa-solid fa-calendar-days"></i> اختر تاريخ ووقت بدء الحجز:</label>
+                <div class="date-time-grid">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-gray);">تاريخ الحجز</label>
+                        <input type="date" id="bookingDate" onchange="checkAvailabilityAndCalculate()">
+                    </div>
+                    <div id="startTimeContainer">
+                        <label style="font-size:0.75rem; color:var(--text-gray);">وقت البدء (الساعة)</label>
+                        <input type="time" id="bookingStartTime" value="10:00" onchange="checkAvailabilityAndCalculate()">
+                    </div>
+                </div>
+
+                <label><i class="fa-solid fa-clock"></i> تفاصيل مدة الحجز:</label>
+                <div class="calc-inputs">
+                    <select id="bookingUnit" onchange="onBookingUnitChange()"></select>
+                    <input type="number" id="bookingCount" value="1" min="1" oninput="checkAvailabilityAndCalculate()" style="width: 100px;">
+                </div>
+
+                <div id="endTimeDisplay" class="end-time-badge" style="display: none;">
+                    <i class="fa-solid fa-hourglass-end"></i>
+                    <span>وقت الانتهاء المتوقع: <strong id="calculatedEndTime">--:--</strong></span>
+                </div>
+
+                <div id="availabilityStatus" class="availability-status"></div>
+
+                <div class="booking-summary-box">
+                    <span>إجمالي المبلغ المطلـوب:</span>
+                    <span id="calculatedTotal" style="color: var(--royal-blue); font-size: 1.25rem;">0 ر.س</span>
+                </div>
+            </div>
+
+            <div class="owner-preview-box" id="ownerPreviewBox" style="display: none;">
+                <i class="fa-solid fa-circle-info"></i> تسعيرة العقار المعروضة للمستأجرين: <br>
+                <span id="ownerPriceText" style="color: var(--royal-blue); font-size: 1.1rem;"></span>
+            </div>
+
+            <div class="action-buttons">
+                <div id="tenantActionButtons">
+                    <button class="btn-booking-request" id="submitBookingBtn" onclick="sendBookingNotification()">
+                        <i class="fa-solid fa-paper-plane"></i> طلب حجز الموقع وإرسال إشعار للمالك
+                    </button>
+                </div>
+
+                <a id="modalWhatsapp" href="#" target="_blank" class="whatsapp-btn">
+                    <i class="fa-brands fa-whatsapp"></i> تواصل فوري عبر الواتساب
+                </a>
+                
+                <a id="modalMap" href="#" target="_blank" class="map-btn" style="display: none;">
+                    <i class="fa-solid fa-location-dot"></i> الموقع بالخريطة
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // منصة مكان - Supabase Auth + RLS + حجوزات مركزية
+        // =========================================================
+
+        const SUPABASE_URL = 'https://ogmvzzgzqlqucgjnmxha.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nbXZ6emd6cWxxdWNnam5teGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NTA2NDksImV4cCI6MjEwNTEyNjY0OX0.gAUFmnuPXvkvmh85ouxQj3M5zYzTjpYqc6Tu0Msz1Wk';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const MAKAN_TIMEZONE_OFFSET = '+03:00';
+        const MAKAN_TIMEZONE = 'Asia/Riyadh';
+
+        let locations = [];
+        let notifications = [];
+
+        let currentAuthUser = null;
+        let currentProfile = null;
+
+        let selectedRole = 'studio';
+        let isRegisterMode = false;
+        let isPasswordValid = false;
+        let activeLocation = null;
+
+        let availabilityRequestId = 0;
+        let activeBookingWindow = null;
+        let activeBookingIsAvailable = false;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function openGateModal() {
+            document.getElementById('gateModal').style.display = 'flex';
+        }
+
+        function closeGateModal() {
+            document.getElementById('gateModal').style.display = 'none';
+        }
+
+        function getDisplayUser() {
+            if (!currentAuthUser || !currentProfile) return null;
+
+            return {
+                id: currentAuthUser.id,
+                name: currentProfile.full_name || currentAuthUser.email?.split('@')[0] || 'مستخدم',
+                email: currentAuthUser.email || '',
+                role: currentProfile.role || 'studio'
+            };
+        }
+
+        async function loadAuthenticatedUser() {
+            const { data: { user }, error } = await _supabase.auth.getUser();
+
+            if (error || !user) {
+                currentAuthUser = null;
+                currentProfile = null;
+                localStorage.removeItem('makan_user');
+                applyUserInterface(null);
+                return null;
+            }
+
+            currentAuthUser = user;
+
+            const { data: profile, error: profileError } = await _supabase
+                .from('profiles')
+                .select('id, full_name, role')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !profile) {
+                console.error('Profile error:', profileError);
+                currentProfile = null;
+                applyUserInterface(null);
+                return null;
+            }
+
+            currentProfile = profile;
+            const userData = getDisplayUser();
+            localStorage.setItem('makan_user', JSON.stringify(userData));
+
+            applyUserInterface(userData);
+            return userData;
+        }
+
+        function applyUserInterface(user) {
+            const guestNav = document.getElementById('guestNav');
+            const authNav = document.getElementById('authNav');
+
+            if (!user) {
+                guestNav.style.display = 'block';
+                authNav.style.display = 'none';
+
+                document.getElementById('addPropertyBtn').style.display = 'none';
+                document.getElementById('myPropertiesBtn').style.display = 'none';
+                document.getElementById('adminDashboardBtn').style.display = 'none';
+                document.getElementById('notifBtn').style.display = 'none';
+                return;
+            }
+
+            closeGateModal();
+            guestNav.style.display = 'none';
+            authNav.style.display = 'flex';
+
+            document.getElementById('displayUserName').innerText = 'مرحباً، ' + user.name;
+
+            let roleTitle = 'استوديو إنتاج';
+            if (user.role === 'owner') roleTitle = 'صاحب عقار';
+            if (user.role === 'admin') roleTitle = 'مدير المنصة';
+            document.getElementById('displayUserRole').innerText = roleTitle;
+
+            document.getElementById('addPropertyBtn').style.display = user.role === 'owner' ? 'inline-flex' : 'none';
+            document.getElementById('myPropertiesBtn').style.display = user.role === 'owner' ? 'inline-flex' : 'none';
+            document.getElementById('adminDashboardBtn').style.display = user.role === 'admin' ? 'inline-flex' : 'none';
+            document.getElementById('notifBtn').style.display = ['owner', 'admin'].includes(user.role) ? 'flex' : 'none';
+        }
+
+        window.onload = async function () {
+            const today = new Intl.DateTimeFormat('en-CA', {
+                timeZone: MAKAN_TIMEZONE,
+                year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+
+            document.getElementById('bookingDate').min = today;
+            document.getElementById('bookingDate').value = today;
+
+            // جلب الأماكن متاح للعموم مباشرة
+            await fetchPropertiesFromSupabase();
+
+            const { data: { session }, error } = await _supabase.auth.getSession();
+            if (error) console.error('Session error:', error);
+
+            if (session?.user) {
+                const user = await loadAuthenticatedUser();
+                if (user) {
+                    await fetchNotificationsFromSupabase();
+                }
+            } else {
+                applyUserInterface(null);
+            }
+        };
+
+        _supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_OUT') {
+                currentAuthUser = null;
+                currentProfile = null;
+                localStorage.removeItem('makan_user');
+                applyUserInterface(null);
+            }
+        });
+
+        // =========================================================
+        // البيانات
+        // =========================================================
+
+        async function fetchPropertiesFromSupabase() {
+            const { data, error } = await _supabase
+                .from('properties')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('خطأ في جلب العقارات:', error);
+                showToast('تعذر جلب العقارات من قاعدة البيانات.');
+                return;
+            }
+
+            locations = (data || []).map(item => ({
+                id: item.id,
+                title: item.title,
+                location: item.location,
+                rentalOptions: item.rental_options,
+                hourlyPrice: item.hourly_price == null ? null : Number(item.hourly_price),
+                minHours: item.min_hours,
+                dailyPrice: item.daily_price == null ? null : Number(item.daily_price),
+                phone: item.phone,
+                mapUrl: item.map_url,
+                image: item.image,
+                description: item.description,
+                ownerEmail: item.owner_email,
+                ownerId: item.owner_id
+            }));
+
+            renderLocations(locations);
+        }
+
+        async function fetchNotificationsFromSupabase() {
+            if (!currentAuthUser || !currentProfile) return;
+
+            if (currentProfile.role === 'studio') {
+                notifications = [];
+                updateNotificationBadge();
+                return;
+            }
+
+            let query = _supabase
+                .from('notifications')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (currentProfile.role === 'owner') {
+                query = query.eq('owner_id', currentAuthUser.id);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('Notification error:', error);
+                return;
+            }
+
+            notifications = (data || []).map(n => ({
+                id: n.id,
+                ownerEmail: n.owner_email,
+                propertyTitle: n.property_title,
+                studioName: n.studio_name,
+                bookingDate: n.booking_date,
+                startTime: n.start_time,
+                endTime: n.end_time,
+                duration: n.duration,
+                totalPrice: n.total_price,
+                phone: n.phone,
+                time: n.time,
+                read: n.is_read
+            }));
+
+            updateNotificationBadge();
+        }
+
+        // =========================================================
+        // المصادقة
+        // =========================================================
+
+        function selectRole(role, el) {
+            if (!['studio', 'owner'].includes(role)) return;
+            selectedRole = role;
+            document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function switchAuthMode() {
+            isRegisterMode = !isRegisterMode;
+
+            document.getElementById('modalHeader').innerText = isRegisterMode ? 'إنشاء حساب جديد' : 'تسجيل الدخول';
+            document.getElementById('modalSubHeader').innerText = isRegisterMode
+                ? 'سجل بياناتك للبدء في استخدام منصة مكان'
+                : 'أدخل بياناتك للوصول إلى منصة مكان';
+
+            document.getElementById('nameGroup').style.display = isRegisterMode ? 'block' : 'none';
+            document.getElementById('termsContainer').style.display = isRegisterMode ? 'block' : 'none';
+            document.getElementById('passHint').style.display = isRegisterMode ? 'block' : 'none';
+            document.getElementById('authRoleContainer').style.display = isRegisterMode ? 'block' : 'none';
+
+            document.getElementById('submitBtn').innerText = isRegisterMode ? 'إنشاء الحساب ودخول' : 'تسجيل الدخول';
+            document.getElementById('toggleText').innerText = isRegisterMode ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟';
+            document.getElementById('toggleLink').innerText = isRegisterMode ? 'تسجيل الدخول' : 'إنشاء حساب جديد';
+
+            if (isRegisterMode) {
+                validatePassword();
+            } else {
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        function validatePassword() {
+            if (!isRegisterMode) return;
+
+            const pass = document.getElementById('userPass').value;
+            const hasLength = pass.length >= 8;
+            const hasLetter = /[a-zA-Z]/.test(pass);
+            const hasNumber = /[0-9]/.test(pass);
+
+            updateRuleStatus('rule-length', hasLength);
+            updateRuleStatus('rule-letter', hasLetter);
+            updateRuleStatus('rule-number', hasNumber);
+
+            isPasswordValid = hasLength && hasLetter && hasNumber;
+            checkFormValid();
+        }
+
+        function updateRuleStatus(elementId, isValid) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.className = isValid ? 'valid' : 'invalid';
+            const textContent = el.innerText.replace(/^.*?\s/, '');
+            el.innerHTML = `<i class="fa-solid fa-${isValid ? 'check' : 'xmark'}"></i> ${textContent}`;
+        }
+
+        function checkFormValid() {
+            if (!isRegisterMode) {
+                document.getElementById('submitBtn').disabled = false;
+                return;
+            }
+
+            const termsChecked = document.getElementById('termsCheck').checked;
+            document.getElementById('submitBtn').disabled = !(isPasswordValid && termsChecked);
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('userEmail').value.trim().toLowerCase();
+            const password = document.getElementById('userPass').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            submitBtn.disabled = true;
+
+            try {
+                if (isRegisterMode) {
+                    const name = document.getElementById('userName').value.trim();
+                    const termsChecked = document.getElementById('termsCheck').checked;
+
+                    if (!name) {
+                        showToast('يرجى كتابة الاسم الكامل.');
+                        return;
+                    }
+                    if (!isPasswordValid) {
+                        showToast('كلمة السر لا تحقق الشروط.');
+                        return;
+                    }
+                    if (!termsChecked) {
+                        showToast('يجب الموافقة على الشروط والأحكام.');
+                        return;
+                    }
+
+                    const { data, error } = await _supabase.auth.signUp({
+                        email,
+                        password,
+                        options: {
+                            data: {
+                                full_name: name,
+                                role: selectedRole
+                            }
+                        }
+                    });
+
+                    if (error) throw error;
+
+                    if (!data.session) {
+                        showToast('تم إنشاء الحساب! تحقق من بريدك لتأكيد التسجيل ثم قم بالدخول.');
+                        return;
+                    }
+
+                    const loaded = await loadAuthenticatedUser();
+                    if (!loaded) return;
+
+                    await fetchNotificationsFromSupabase();
+                    showToast('تم إنشاء الحساب وتسجيل الدخول بنجاح!');
+                    return;
+                }
+
+                const { error } = await _supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                const loaded = await loadAuthenticatedUser();
+                if (!loaded) return;
+
+                await fetchNotificationsFromSupabase();
+                showToast('تم تسجيل الدخول بنجاح!');
+
+            } catch (error) {
+                console.error('Auth error:', error);
+
+                const msg = (error?.message || '').toLowerCase();
+                let message = 'تعذر تنفيذ عملية تسجيل الدخول.';
+
+                if (msg.includes('invalid login credentials')) {
+                    message = 'البريد الإلكتروني أو كلمة السر غير صحيحة.';
+                } else if (msg.includes('user already registered')) {
+                    message = 'هذا البريد مسجل مسبقاً.';
+                } else if (msg.includes('email not confirmed')) {
+                    message = 'يرجى تأكيد البريد الإلكتروني أولاً.';
+                }
+
+                showToast(message);
+            } finally {
+                if (isRegisterMode) checkFormValid();
+                else submitBtn.disabled = false;
+            }
+        }
+
+        async function logout() {
+            const { error } = await _supabase.auth.signOut();
+
+            if (error) {
+                console.error(error);
+                showToast('حدث خطأ أثناء تسجيل الخروج.');
+                return;
+            }
+
+            currentAuthUser = null;
+            currentProfile = null;
+            localStorage.removeItem('makan_user');
+            applyUserInterface(null);
+            showToast('تم تسجيل الخروج بنجاح.');
+        }
+
+        // =========================================================
+        // لوحة الإدارة والعقارات
+        // =========================================================
+
+        function togglePricingInputs() {
+            const opt = document.getElementById('rentalOptions').value;
+            const hGroup = document.getElementById('hourlyGroup');
+            const mGroup = document.getElementById('minHoursGroup');
+            const dGroup = document.getElementById('dailyGroup');
+
+            if (opt === 'hourly') {
+                hGroup.style.display = 'block';
+                mGroup.style.display = 'block';
+                dGroup.style.display = 'none';
+            } else if (opt === 'daily') {
+                hGroup.style.display = 'none';
+                mGroup.style.display = 'none';
+                dGroup.style.display = 'block';
+            } else {
+                hGroup.style.display = 'block';
+                mGroup.style.display = 'block';
+                dGroup.style.display = 'block';
+            }
+        }
+
+        async function openAdminDashboardModal() {
+            if (!currentAuthUser || currentProfile?.role !== 'admin') {
+                showToast('غير مصرح لك بالوصول للوحة التحكم!');
+                return;
+            }
+
+            await fetchPropertiesFromSupabase();
+            await fetchNotificationsFromSupabase();
+            await renderAdminDashboard();
+            document.getElementById('adminDashboardModal').style.display = 'flex';
+        }
+
+        function closeAdminDashboardModal() {
+            document.getElementById('adminDashboardModal').style.display = 'none';
+        }
+
+        async function renderAdminDashboard() {
+            document.getElementById('statTotalProps').innerText = locations.length;
+            document.getElementById('statTotalNotifs').innerText = notifications.length;
+
+            const { count, error } = await _supabase
+                .from('profiles')
+                .select('id', { count: 'exact', head: true })
+                .eq('role', 'owner');
+
+            if (!error && count != null) {
+                document.getElementById('statTotalOwners').innerText = count;
+            }
+
+            const tbody = document.getElementById('adminPropsTableBody');
+            tbody.innerHTML = locations.map(loc => `
+                <tr>
+                    <td><strong>${loc.title}</strong></td>
+                    <td>${loc.location}</td>
+                    <td>${getFormattedPriceText(loc)}</td>
+                    <td>${loc.ownerEmail || 'غير مربوط'}</td>
+                    <td>
+                        <button class="btn-edit" onclick="adminEditProp(${loc.id})"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-delete" onclick="adminDeleteProp(${loc.id})"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function adminEditProp(id) {
+            closeAdminDashboardModal();
+            openAddModal(id, true);
+        }
+
+        async function adminDeleteProp(id) {
+            if (currentProfile?.role !== 'admin') {
+                showToast('غير مصرح لك بهذه العملية.');
+                return;
+            }
+
+            if (confirm('هل تريد حذف هذا العقار كمسؤول؟')) {
+                const { error } = await _supabase.from('properties').delete().eq('id', id);
+
+                if (!error) {
+                    await fetchPropertiesFromSupabase();
+                    await renderAdminDashboard();
+                    showToast('تم حذف العقار من المنصة فوراً.');
+                } else {
+                    console.error(error);
+                    showToast('حدث خطأ أثناء الحذف.');
+                }
+            }
+        }
+
+        function openAddModal(editingId = null, bypassOwnerCheck = false) {
+            if (!currentAuthUser || !currentProfile) {
+                openGateModal();
+                showToast('يجب تسجيل الدخول أولاً.');
+                return;
+            }
+
+            const isAdmin = currentProfile.role === 'admin';
+            const isOwner = currentProfile.role === 'owner';
+
+            if (!editingId && !isOwner && !isAdmin) {
+                showToast('إضافة العقارات متاحة لحسابات الملاك فقط.');
+                return;
+            }
+
+            document.getElementById('editingPropertyId').value = editingId || '';
+
+            if (editingId) {
+                const prop = locations.find(p => p.id === Number(editingId));
+                const ownsProperty = prop?.ownerId === currentAuthUser.id;
+                const canEdit = prop && (ownsProperty || isAdmin || bypassOwnerCheck);
+
+                if (!canEdit) {
+                    showToast('لا تملك صلاحية تعديل هذا العقار!');
+                    return;
+                }
+
+                document.getElementById('addPropertyModalTitle').innerText = 'تعديل العقار المنشور';
+                document.getElementById('newTitle').value = prop.title;
+                document.getElementById('newLocation').value = prop.location;
+                document.getElementById('newPhone').value = prop.phone;
+                document.getElementById('rentalOptions').value = prop.rentalOptions || 'both';
+                document.getElementById('newHourlyPrice').value = prop.hourlyPrice ?? '';
+                document.getElementById('newMinHours').value = prop.minHours || 1;
+                document.getElementById('newDailyPrice').value = prop.dailyPrice ?? '';
+                document.getElementById('newMapUrl').value = prop.mapUrl || '';
+                document.getElementById('newDesc').value = prop.description || '';
+                document.getElementById('newImageFile').value = '';
+                togglePricingInputs();
+            } else {
+                document.getElementById('addPropertyModalTitle').innerText = 'إضافة عقار جديد للمنافسة';
+                document.getElementById('newTitle').value = '';
+                document.getElementById('newLocation').value = '';
+                document.getElementById('newPhone').value = '';
+                document.getElementById('rentalOptions').value = 'both';
+                document.getElementById('newHourlyPrice').value = '';
+                document.getElementById('newMinHours').value = 1;
+                document.getElementById('newDailyPrice').value = '';
+                document.getElementById('newMapUrl').value = '';
+                document.getElementById('newDesc').value = '';
+                document.getElementById('newImageFile').value = '';
+                togglePricingInputs();
+            }
+
+            document.getElementById('addModal').style.display = 'flex';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        function formatPhoneNumber(phone) {
+            let clean = String(phone || '').replace(/[^0-9]/g, '');
+            if (clean.startsWith('05')) clean = '966' + clean.substring(1);
+            return clean;
+        }
+
+        async function handleSaveProperty(e) {
+            e.preventDefault();
+
+            if (!currentAuthUser || !currentProfile) {
+                openGateModal();
+                showToast('يجب تسجيل الدخول أولاً.');
+                return;
+            }
+
+            if (!['owner', 'admin'].includes(currentProfile.role)) {
+                showToast('لا تملك صلاحية نشر العقارات.');
+                return;
+            }
+
+            const editingId = document.getElementById('editingPropertyId').value;
+            const fileInput = document.getElementById('newImageFile');
+            const file = fileInput.files[0];
+
+            const rawPhone = document.getElementById('newPhone').value;
+            const formattedPhone = formatPhoneNumber(rawPhone);
+            const rOptions = document.getElementById('rentalOptions').value;
+            const hPrice = document.getElementById('newHourlyPrice').value ? Number(document.getElementById('newHourlyPrice').value) : null;
+            const minH = document.getElementById('newMinHours').value ? Number(document.getElementById('newMinHours').value) : 1;
+            const dPrice = document.getElementById('newDailyPrice').value ? Number(document.getElementById('newDailyPrice').value) : null;
+
+            if ((rOptions === 'hourly' || rOptions === 'both') && (!hPrice || hPrice < 0)) {
+                showToast('أدخل سعر الساعة بشكل صحيح.');
+                return;
+            }
+
+            if ((rOptions === 'daily' || rOptions === 'both') && (!dPrice || dPrice < 0)) {
+                showToast('أدخل السعر اليومي بشكل صحيح.');
+                return;
+            }
+
+            const saveProcess = async (imgUrl) => {
+                const payload = {
+                    title: document.getElementById('newTitle').value.trim(),
+                    location: document.getElementById('newLocation').value.trim(),
+                    phone: formattedPhone,
+                    rental_options: rOptions,
+                    hourly_price: rOptions === 'daily' ? null : hPrice,
+                    min_hours: rOptions === 'daily' ? 1 : minH,
+                    daily_price: rOptions === 'hourly' ? null : dPrice,
+                    map_url: document.getElementById('newMapUrl').value.trim() || null,
+                    description: document.getElementById('newDesc').value.trim()
+                };
+
+                if (imgUrl) payload.image = imgUrl;
+
+                let error = null;
+
+                if (editingId) {
+                    ({ error } = await _supabase
+                        .from('properties')
+                        .update(payload)
+                        .eq('id', Number(editingId)));
+                } else {
+                    if (!imgUrl) {
+                        showToast('يرجى اختيار صورة للعقار من جهازك.');
+                        return;
+                    }
+
+                    payload.owner_id = currentAuthUser.id;
+                    payload.owner_email = currentAuthUser.email;
+
+                    ({ error } = await _supabase
+                        .from('properties')
+                        .insert([payload]));
+                }
+
+                if (error) {
+                    console.error('Property save error:', error);
+                    showToast(editingId ? 'خطأ أثناء تعديل العقار.' : 'خطأ أثناء حفظ العقار.');
+                    return;
+                }
+
+                showToast(editingId ? 'تم تعديل العقار بنجاح!' : 'تم نشر العقار بنجاح!');
+                await fetchPropertiesFromSupabase();
+                closeAddModal();
+
+                if (document.getElementById('myPropertiesModal').style.display === 'flex') {
+                    renderMyProperties();
+                }
+            };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (evt) => await saveProcess(evt.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                const existing = locations.find(l => l.id === Number(editingId));
+                await saveProcess(existing ? existing.image : null);
+            }
+        }
+
+        // =========================================================
+        // الحجوزات المركزية في Supabase
+        // =========================================================
+
+        function formatRiyadhTime(dateObj) {
+            return new Intl.DateTimeFormat('ar-SA', {
+                timeZone: MAKAN_TIMEZONE,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(dateObj);
+        }
+
+        function buildBookingWindow(date, time, unit, count) {
+            if (!date || !count || count < 1) return null;
+
+            let start;
+            let end;
+
+            if (unit === 'ساعة') {
+                if (!time) return null;
+                start = new Date(`${date}T${time}:00${MAKAN_TIMEZONE_OFFSET}`);
+                end = new Date(start.getTime() + (count * 60 * 60 * 1000));
+            } else {
+                start = new Date(`${date}T00:00:00${MAKAN_TIMEZONE_OFFSET}`);
+                end = new Date(start.getTime() + (count * 24 * 60 * 60 * 1000));
+            }
+
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+
+            return {
+                startAt: start.toISOString(),
+                endAt: end.toISOString(),
+                endDisplay: formatRiyadhTime(end)
+            };
+        }
+
+        function calculateBookingTotal(unit, count) {
+            if (!activeLocation) return 0;
+
+            if (unit === 'ساعة') {
+                return Number(activeLocation.hourlyPrice || 0) * count;
+            }
+
+            return Number(activeLocation.dailyPrice || 0) * count;
+        }
+
+        async function checkAvailabilityAndCalculate() {
+            if (!activeLocation) return;
+
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingStartTime').value;
+            const unit = document.getElementById('bookingUnit').value;
+            const countInput = document.getElementById('bookingCount');
+            let count = Math.max(1, parseInt(countInput.value) || 1);
+
+            const statusEl = document.getElementById('availabilityStatus');
+            const submitBtn = document.getElementById('submitBookingBtn');
+            const endTimeDisplay = document.getElementById('endTimeDisplay');
+            const calculatedEndTimeEl = document.getElementById('calculatedEndTime');
+
+            if (unit === 'ساعة') {
+                const minH = activeLocation.minHours || 1;
+                if (count < minH) {
+                    count = minH;
+                    countInput.value = minH;
+                }
+            }
+
+            const total = calculateBookingTotal(unit, count);
+            document.getElementById('calculatedTotal').innerText = total.toLocaleString() + ' ر.س';
+
+            const bookingWindow = buildBookingWindow(date, time, unit, count);
+            activeBookingWindow = bookingWindow;
+            activeBookingIsAvailable = false;
+
+            if (unit === 'ساعة' && bookingWindow) {
+                calculatedEndTimeEl.innerText = bookingWindow.endDisplay;
+                endTimeDisplay.style.display = 'flex';
+            } else {
+                endTimeDisplay.style.display = 'none';
+            }
+
+            const phone = formatPhoneNumber(activeLocation.phone || '');
+            const unitLabel = unit === 'ساعة' ? (count === 1 ? 'ساعة' : 'ساعات') : (count === 1 ? 'يوم' : 'أيام');
+            const timeText = unit === 'ساعة' && bookingWindow
+                ? `من ${time} إلى ${bookingWindow.endDisplay}`
+                : 'طوال اليوم';
+            const message = encodeURIComponent(
+                `مرحباً، أود حجز: ${activeLocation.title}\n📅 التاريخ: ${date}\n⏰ الوقت: ${timeText}\nالمدة: ${count} ${unitLabel}\nالإجمالي: ${total.toLocaleString()} ر.س\nعبر منصة مكان`
+            );
+            document.getElementById('modalWhatsapp').href = `https://wa.me/${phone}?text=${message}`;
+
+            if (!date || !bookingWindow) {
+                statusEl.style.display = 'none';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            const requestId = ++availabilityRequestId;
+            statusEl.className = 'availability-status';
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق من توفر الموعد...';
+            submitBtn.disabled = true;
+
+            const { data, error } = await _supabase.rpc('is_booking_slot_available', {
+                p_property_id: activeLocation.id,
+                p_start_at: bookingWindow.startAt,
+                p_end_at: bookingWindow.endAt
+            });
+
+            if (requestId !== availabilityRequestId) return;
+
+            if (error) {
+                console.error('Availability error:', error);
+                statusEl.className = 'availability-status unavailable';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> تعذر التحقق من الموعد حالياً.';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            activeBookingIsAvailable = data === true;
+
+            if (!activeBookingIsAvailable) {
+                statusEl.className = 'availability-status unavailable';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> هذا الموعد محجوز مسبقاً، يرجى اختيار تاريخ أو وقت آخر.';
+                submitBtn.disabled = true;
+            } else {
+                statusEl.className = 'availability-status available';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> الموعد متاح للحجز!';
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function sendBookingNotification() {
+            if (!currentAuthUser || !currentProfile) {
+                openGateModal();
+                showToast('يرجى تسجيل الدخول أولاً لإرسال طلب الحجز.');
+                return;
+            }
+
+            if (!['studio', 'admin'].includes(currentProfile.role)) {
+                showToast('طلبات الحجز متاحة لحسابات الاستوديو.');
+                return;
+            }
+
+            if (!activeLocation.ownerId) {
+                showToast('هذا العقار غير مربوط بحساب مالك بعد.');
+                return;
+            }
+
+            const bDate = document.getElementById('bookingDate').value;
+            const bTime = document.getElementById('bookingStartTime').value;
+            const unit = document.getElementById('bookingUnit').value;
+            const count = Math.max(1, parseInt(document.getElementById('bookingCount').value) || 1);
+            const bookingWindow = buildBookingWindow(bDate, bTime, unit, count);
+
+            if (!bookingWindow) {
+                showToast('تحقق من تاريخ ووقت الحجز.');
+                return;
+            }
+
+            if (!activeBookingIsAvailable) {
+                await checkAvailabilityAndCalculate();
+                if (!activeBookingIsAvailable) {
+                    showToast('الموعد غير متاح للحجز.');
+                    return;
+                }
+            }
+
+            const total = calculateBookingTotal(unit, count);
+            const unitLabel = unit === 'ساعة' ? (count === 1 ? 'ساعة' : 'ساعات') : (count === 1 ? 'يوم' : 'أيام');
+            const startTimeText = unit === 'ساعة' ? bTime : 'طوال اليوم';
+            const endTimeText = unit === 'ساعة' ? bookingWindow.endDisplay : `نهاية مدة الحجز (${count} ${unitLabel})`;
+            const durationText = `${count} ${unitLabel}`;
+            const totalPriceText = total.toLocaleString() + ' ر.س';
+
+            const submitBtn = document.getElementById('submitBookingBtn');
+            submitBtn.disabled = true;
+
+            const { error } = await _supabase.rpc('create_booking_request', {
+                p_property_id: activeLocation.id,
+                p_start_at: bookingWindow.startAt,
+                p_end_at: bookingWindow.endAt,
+                p_booking_unit: unit === 'ساعة' ? 'hourly' : 'daily',
+                p_booking_count: count,
+                p_total_price: total,
+                p_start_time_text: startTimeText,
+                p_end_time_text: endTimeText,
+                p_duration_text: durationText,
+                p_total_price_text: totalPriceText
+            });
+
+            if (error) {
+                console.error('Booking request error:', error);
+                const msg = (error.message || '').toUpperCase();
+
+                if (msg.includes('BOOKING_CONFLICT')) {
+                    activeBookingIsAvailable = false;
+                    await checkAvailabilityAndCalculate();
+                    showToast('سبق حجز هذا الموعد. اختر موعداً آخر.');
+                } else {
+                    showToast('تعذر إرسال طلب الحجز. حاول مرة أخرى.');
+                }
+
+                return;
+            }
+
+            activeBookingIsAvailable = false;
+            closeDetails();
+            showToast('تم إرسال طلب الحجز وحفظ الموعد بنجاح!');
+        }
+
+        // =========================================================
+        // الإشعارات وعقارات المالك
+        // =========================================================
+
+        function updateNotificationBadge() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notifBadge');
+
+            if (unreadCount > 0 && ['owner', 'admin'].includes(currentProfile?.role)) {
+                badge.innerText = unreadCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        async function openNotificationsModal() {
+            if (!currentAuthUser || !['owner', 'admin'].includes(currentProfile?.role)) {
+                showToast('لا توجد لديك صلاحية لعرض مركز الطلبات.');
+                return;
+            }
+
+            let updateQuery = _supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('is_read', false);
+
+            if (currentProfile.role === 'owner') {
+                updateQuery = updateQuery.eq('owner_id', currentAuthUser.id);
+            }
+
+            const { error: updateError } = await updateQuery;
+            if (updateError) console.error('Notification read update error:', updateError);
+
+            await fetchNotificationsFromSupabase();
+
+            const listEl = document.getElementById('notificationsList');
+
+            if (notifications.length === 0) {
+                listEl.innerHTML = '<p style="text-align:center; color:var(--text-gray); padding:20px;">لا توجد إشعارات حجز حالية.</p>';
+            } else {
+                listEl.innerHTML = notifications.map(n => `
+                    <div class="notification-item">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <strong>🎬 طلب حجز جديد من: ${n.studioName}</strong>
+                            <span style="font-size:0.75rem; color:var(--text-gray);">${n.time || ''}</span>
+                        </div>
+                        <p style="margin-bottom:4px;">العقار المطلوب: <strong>${n.propertyTitle}</strong></p>
+                        <p style="font-size:0.85rem; color:var(--royal-blue); margin-bottom:6px;">📅 التاريخ: <strong>${n.bookingDate || 'غير محدد'}</strong> | من: <strong>${n.startTime || '--'}</strong> إلى: <strong>${n.endTime || '--'}</strong></p>
+                        <p style="font-size:0.85rem; color:var(--text-gray);">المدة: ${n.duration} | الإجمالي: <strong style="color:var(--royal-blue);">${n.totalPrice}</strong></p>
+                        <div style="margin-top:10px;">
+                            <a href="https://wa.me/${formatPhoneNumber(n.phone)}?text=${encodeURIComponent('مرحباً، وصلني طلب حجزكم للعقار في تاريخ ' + n.bookingDate + ' من ' + n.startTime + ' إلى ' + n.endTime + ' عبر منصة مكان')}" target="_blank" style="color:var(--success-green); font-weight:700; text-decoration:none; font-size:0.85rem;">
+                                <i class="fa-brands fa-whatsapp"></i> تواصل لموافقة الحجز
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('notificationsModal').style.display = 'flex';
+        }
+
+        function closeNotificationsModal() {
+            document.getElementById('notificationsModal').style.display = 'none';
+        }
+
+        function openMyPropertiesModal() {
+            if (!currentAuthUser || currentProfile?.role !== 'owner') {
+                showToast('هذه الصفحة مخصصة لأصحاب العقارات.');
+                return;
+            }
+
+            renderMyProperties();
+            document.getElementById('myPropertiesModal').style.display = 'flex';
+        }
+
+        function closeMyPropertiesModal() {
+            document.getElementById('myPropertiesModal').style.display = 'none';
+        }
+
+        function renderMyProperties() {
+            const myProps = locations.filter(l => l.ownerId === currentAuthUser?.id);
+            const listEl = document.getElementById('myPropertiesList');
+
+            if (myProps.length === 0) {
+                listEl.innerHTML = '<p style="text-align:center; color:var(--text-gray); padding:20px;">لم تقم بنشر أي عقارات باسم حسابك الحالي بعد.</p>';
+                return;
+            }
+
+            listEl.innerHTML = myProps.map(p => `
+                <div class="my-property-item">
+                    <div>
+                        <strong>${p.title}</strong>
+                        <div style="font-size:0.8rem; color:var(--text-gray);">${p.location} - ${getFormattedPriceText(p)}</div>
+                    </div>
+                    <div class="my-prop-actions">
+                        <button class="btn-edit" onclick="openAddModal(${p.id})"><i class="fa-solid fa-pen"></i> تعديل</button>
+                        <button class="btn-delete" onclick="deleteProperty(${p.id})"><i class="fa-solid fa-trash"></i> حذف</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function deleteProperty(id) {
+            if (!currentAuthUser || currentProfile?.role !== 'owner') {
+                showToast('لا تملك صلاحية حذف العقارات.');
+                return;
+            }
+
+            const targetProp = locations.find(l => l.id === id);
+            if (!targetProp || targetProp.ownerId !== currentAuthUser.id) {
+                showToast('لا يمكنك حذف عقار لا تملكه!');
+                return;
+            }
+
+            if (confirm('هل أنت متأكد من رغبتك في حذف هذا العقار المنشور؟')) {
+                const { error } = await _supabase.from('properties').delete().eq('id', id);
+
+                if (!error) {
+                    await fetchPropertiesFromSupabase();
+                    renderMyProperties();
+                    showToast('تم حذف عقارك بنجاح من قاعدة البيانات!');
+                } else {
+                    console.error(error);
+                    showToast('حدث خطأ أثناء الحذف.');
+                }
+            }
+        }
+
+        // =========================================================
+        // العرض والبحث
+        // =========================================================
+
+        function getFormattedPriceText(loc) {
+            if (loc.rentalOptions === 'hourly' || (loc.hourlyPrice && !loc.dailyPrice)) {
+                return `${Number(loc.hourlyPrice || 0).toLocaleString()} ر.س / ساعة (أقلها ${loc.minHours || 1} ساعات)`;
+            }
+            if (loc.rentalOptions === 'daily' || (loc.dailyPrice && !loc.hourlyPrice)) {
+                return `${Number(loc.dailyPrice || 0).toLocaleString()} ر.س / يوم`;
+            }
+            if (loc.hourlyPrice && loc.dailyPrice) {
+                return `${Number(loc.hourlyPrice).toLocaleString()} ر.س/ساعة | ${Number(loc.dailyPrice).toLocaleString()} ر.س/يوم`;
+            }
+            return 'حسب الاتفاق';
+        }
+
+        function filterLocations() {
+            const city = document.getElementById('searchCity').value;
+            const category = document.getElementById('searchCategory').value;
+
+            const filtered = locations.filter(loc => {
+                const matchesCity = !city || loc.location.includes(city);
+                const matchesCategory = !category || loc.title.includes(category) || loc.description.includes(category);
+                return matchesCity && matchesCategory;
+            });
+
+            renderLocations(filtered);
+        }
+
+        function renderLocations(dataToRender) {
+            const grid = document.getElementById('locationsGrid');
+
+            if (!dataToRender.length) {
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-gray); padding: 40px;">لا توجد نتائج تطابق خيارات البحث الحالية.</p>';
+                return;
+            }
+
+            grid.innerHTML = dataToRender.map(loc => `
+                <div class="card" onclick="openDetails(${loc.id})">
+                    <img src="${loc.image || ''}" class="card-img" alt="${loc.title}">
+                    <div class="card-body">
+                        <div class="card-title">${loc.title}</div>
+                        <div class="card-info"><i class="fa-solid fa-location-dot"></i> ${loc.location}</div>
+                        <div class="card-price">
+                            <span>${getFormattedPriceText(loc)}</span>
+                            <button class="btn-details">التفاصيل <i class="fa-solid fa-chevron-left"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openDetails(id) {
+            activeLocation = locations.find(l => l.id === id);
+            if (!activeLocation) return;
+
+            const isOwner = currentProfile?.role === 'owner';
+
+            document.getElementById('modalImg').src = activeLocation.image || '';
+            document.getElementById('modalTitle').innerText = activeLocation.title;
+            document.getElementById('modalLoc').innerText = activeLocation.location;
+            document.getElementById('modalDesc').innerText = activeLocation.description;
+
+            const bookingBox = document.getElementById('bookingBox');
+            const ownerPreviewBox = document.getElementById('ownerPreviewBox');
+            const tenantBtns = document.getElementById('tenantActionButtons');
+
+            if (isOwner) {
+                bookingBox.style.display = 'none';
+                tenantBtns.style.display = 'none';
+                ownerPreviewBox.style.display = 'block';
+                document.getElementById('ownerPriceText').innerText = getFormattedPriceText(activeLocation);
+            } else {
+                bookingBox.style.display = 'block';
+                tenantBtns.style.display = 'block';
+                ownerPreviewBox.style.display = 'none';
+
+                const unitSelect = document.getElementById('bookingUnit');
+                unitSelect.innerHTML = '';
+
+                if (activeLocation.rentalOptions === 'hourly' || (activeLocation.hourlyPrice && !activeLocation.dailyPrice)) {
+                    unitSelect.innerHTML = '<option value="ساعة">عدد الساعات</option>';
+                } else if (activeLocation.rentalOptions === 'daily' || (activeLocation.dailyPrice && !activeLocation.hourlyPrice)) {
+                    unitSelect.innerHTML = '<option value="يوم">عدد الأيام</option>';
+                } else {
+                    unitSelect.innerHTML = '<option value="ساعة">عدد الساعات</option><option value="يوم">عدد الأيام</option>';
+                }
+
+                onBookingUnitChange();
+            }
+
+            const mapBtn = document.getElementById('modalMap');
+            if (activeLocation.mapUrl && activeLocation.mapUrl.startsWith('http')) {
+                mapBtn.href = activeLocation.mapUrl;
+                mapBtn.style.display = 'flex';
+            } else {
+                mapBtn.style.display = 'none';
+            }
+
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+
+        function onBookingUnitChange() {
+            if (!activeLocation) return;
+
+            const unit = document.getElementById('bookingUnit').value;
+            const countInput = document.getElementById('bookingCount');
+            const timeContainer = document.getElementById('startTimeContainer');
+            const endTimeDisplay = document.getElementById('endTimeDisplay');
+
+            if (unit === 'ساعة') {
+                const minH = activeLocation.minHours || 1;
+                countInput.value = minH;
+                countInput.min = minH;
+                timeContainer.style.display = 'block';
+                endTimeDisplay.style.display = 'flex';
+            } else {
+                countInput.value = 1;
+                countInput.min = 1;
+                timeContainer.style.display = 'none';
+                endTimeDisplay.style.display = 'none';
+            }
+
+            activeBookingIsAvailable = false;
+            checkAvailabilityAndCalculate();
+        }
+
+        function closeDetails() {
+            availabilityRequestId++;
+            activeBookingWindow = null;
+            activeBookingIsAvailable = false;
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
