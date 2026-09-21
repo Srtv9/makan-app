@@ -651,7 +651,7 @@
 
         const SUPABASE_URL = 'https://ogmvzzgzqlucqjnmxha.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_c3PkDb-i27soW2cdEe7gUw_z8esustM';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const MAKAN_TIMEZONE_OFFSET = '+03:00';
         const MAKAN_TIMEZONE = 'Asia/Riyadh';
